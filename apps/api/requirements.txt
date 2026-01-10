@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sqlmodel
+alembic
+python-multipart
+requests
+pillow
+numpy

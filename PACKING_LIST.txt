@@ -1,0 +1,18 @@
+Package include:
+- apps/
+- scripts/
+- run.bat
+- stop.bat
+- apps/web/node_modules/ (needed for run without install)
+
+Package exclude:
+- apps/web/.next/
+- apps/api/data/
+- data/
+- node_modules/ (root)
+- *.log
+- /tmp/*
+
+Notes:
+- API uses /tmp/prompt-gallery-app.db and /tmp/prompt-gallery-storage by default.
+- If you want a clean package, delete logs and caches before zipping.

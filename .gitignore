@@ -1,0 +1,29 @@
+# deps
+node_modules/
+apps/web/node_modules/
+
+# build artifacts
+apps/web/.next/
+
+# data/logs/tmp
+*.log
+/tmp/
+apps/api/data/
+data/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# env
+apps/web/.env.local
+
+# exports
+apps/api/export.zip
+
+# runtime
+*.pid
+
+# misc
+.DS_Store

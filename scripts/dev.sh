@@ -10,9 +10,11 @@ WEB_LOG="/tmp/prompt-gallery-web.log"
 API_PID_FILE="/tmp/prompt-gallery-api.pid"
 WEB_PID_FILE="/tmp/prompt-gallery-web.pid"
 PORTS_FILE="/tmp/prompt-gallery-ports.env"
+WEB_LOCK_FILE="$WEB_DIR/.next/dev/lock"
 
-export DATABASE_URL="${DATABASE_URL:-sqlite:////tmp/prompt-gallery-app.db}"
-export STORAGE_ROOT="${STORAGE_ROOT:-/tmp/prompt-gallery-storage}"
+DATA_DIR="${DATA_DIR:-$ROOT_DIR/.data}"
+export DATABASE_URL="${DATABASE_URL:-sqlite:////${DATA_DIR}/prompt-gallery-app.db}"
+export STORAGE_ROOT="${STORAGE_ROOT:-${DATA_DIR}/prompt-gallery-storage}"
 
 mkdir -p "$STORAGE_ROOT"
 
@@ -67,7 +69,7 @@ cleanup() {
   stop_pid_file "$WEB_PID_FILE"
 }
 
-trap cleanup INT TERM
+trap cleanup EXIT HUP INT TERM
 
 API_PORT="${API_PORT:-}"
 WEB_PORT="${WEB_PORT:-}"
@@ -83,6 +85,22 @@ if [[ -z "$API_PORT" || -z "$WEB_PORT" ]]; then
   exit 1
 fi
 
+if is_port_in_use "$API_PORT"; then
+  API_PORT="$(find_free_port $((API_PORT + 1)) 8100)"
+fi
+if is_port_in_use "$WEB_PORT"; then
+  WEB_PORT="$(find_free_port $((WEB_PORT + 1)) 3100)"
+fi
+
+if [[ -z "$API_PORT" || -z "$WEB_PORT" ]]; then
+  echo "Failed to find free ports after retry."
+  exit 1
+fi
+
+stop_pid_file "$API_PID_FILE"
+stop_pid_file "$WEB_PID_FILE"
+rm -f "$WEB_LOCK_FILE"
+
 echo "API_PORT=$API_PORT" > "$PORTS_FILE"
 echo "WEB_PORT=$WEB_PORT" >> "$PORTS_FILE"
 echo "WEB_URL=http://localhost:$WEB_PORT" >> "$PORTS_FILE"
@@ -96,6 +114,7 @@ echo "==> start api (port $API_PORT)"
   > "$API_LOG" 2>&1 & echo $! > "$API_PID_FILE")
 
 echo "==> start web (port $WEB_PORT)"
+(cd "$WEB_DIR" && printf "NEXT_PUBLIC_API_BASE=http://127.0.0.1:%s\n" "$API_PORT" > .env.local)
 (cd "$WEB_DIR" && nohup env NEXT_PUBLIC_API_BASE="http://127.0.0.1:$API_PORT" PORT="$WEB_PORT" \
   npm run dev > "$WEB_LOG" 2>&1 & echo $! > "$WEB_PID_FILE")
 

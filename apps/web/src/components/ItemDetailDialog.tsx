@@ -23,6 +23,7 @@ export function ItemDetailDialog({
 }) {
     const [item, setItem] = useState<ItemDTO | null>(null);
     const [busy, setBusy] = useState(false);
+    const [mediaOrientation, setMediaOrientation] = useState<"portrait" | "landscape" | "square" | "unknown">("unknown");
 
     const mediaUrl = useMemo(() => (item ? fileUrl(item.media_url) : ""), [item]);
     const thumbUrl = useMemo(() => (item ? fileUrl(item.thumb_url || item.poster_url || item.media_url) : ""), [item]);
@@ -45,6 +46,10 @@ export function ItemDetailDialog({
         if (open) refresh();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, itemId]);
+
+    useEffect(() => {
+        setMediaOrientation("unknown");
+    }, [itemId, open]);
 
     async function setCategory(categoryId: string) {
         if (!item) return;
@@ -71,7 +76,7 @@ export function ItemDetailDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl rounded-3xl">
+            <DialogContent className="rounded-3xl w-[44vw] max-w-[1200px] sm:max-w-[1200px] max-h-[86vh] overflow-hidden">
                 <DialogHeader>
                     <DialogTitle>详情</DialogTitle>
                 </DialogHeader>
@@ -81,14 +86,28 @@ export function ItemDetailDialog({
                         {busy ? "加载中…" : "未能加载条目"}
                     </div>
                 ) : (
-                    <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+                    <div
+                        className={[
+                            "gap-4 min-h-0 items-stretch",
+                            mediaOrientation === "landscape"
+                                ? "flex flex-col"
+                                : "grid grid-cols-1 lg:grid-cols-[1.25fr_1fr]",
+                        ].join(" ")}
+                    >
                         {/* Left: Media */}
                         <div className="rounded-3xl border bg-white p-3">
-                            <div className="relative w-full overflow-hidden rounded-2xl bg-gray-100 aspect-[4/5]">
+                            <div
+                                className={[
+                                    "relative w-full overflow-hidden rounded-2xl bg-gray-100",
+                                    mediaOrientation === "landscape"
+                                        ? "aspect-[16/9] max-h-[50vh]"
+                                        : "aspect-[9/16] max-h-[60vh]",
+                                ].join(" ")}
+                            >
                                 {item.media_type === "video" ? (
                                     <video
                                         controls
-                                        className="absolute inset-0 h-full w-full object-cover"
+                                        className="absolute inset-0 h-full w-full object-contain"
                                         src={mediaUrl}
                                         poster={thumbUrl}
                                         preload="metadata"
@@ -100,13 +119,26 @@ export function ItemDetailDialog({
                                             if (dur > 0.1) {
                                                 try { v.currentTime = Math.min(0.1, dur - 0.05); } catch { }
                                             }
+                                            if (v.videoWidth && v.videoHeight) {
+                                                if (v.videoWidth > v.videoHeight) setMediaOrientation("landscape");
+                                                else if (v.videoWidth < v.videoHeight) setMediaOrientation("portrait");
+                                                else setMediaOrientation("square");
+                                            }
                                         }}
                                     />
                                 ) : (
                                     <img
                                         src={thumbUrl}
                                         alt={item.title}
-                                        className="absolute inset-0 h-full w-full object-cover"
+                                        className="absolute inset-0 h-full w-full object-contain"
+                                        onLoad={(e) => {
+                                            const img = e.currentTarget;
+                                            if (img.naturalWidth && img.naturalHeight) {
+                                                if (img.naturalWidth > img.naturalHeight) setMediaOrientation("landscape");
+                                                else if (img.naturalWidth < img.naturalHeight) setMediaOrientation("portrait");
+                                                else setMediaOrientation("square");
+                                            }
+                                        }}
                                         onError={(e) => {
                                             (e.currentTarget as HTMLImageElement).src = mediaUrl;
                                         }}
@@ -116,8 +148,20 @@ export function ItemDetailDialog({
                         </div>
 
                         {/* Right: Info */}
-                        <div className="space-y-3">
-                            <div className="rounded-3xl border bg-white p-4">
+                        <div
+                            className={[
+                                "space-y-3 min-h-0 flex-1",
+                                mediaOrientation === "landscape"
+                                    ? "max-h-[30vh] overflow-y-auto pr-1"
+                                    : "max-h-[72vh] overflow-y-auto pr-2",
+                            ].join(" ")}
+                        >
+                            <div
+                                className={[
+                                    "rounded-3xl border bg-white p-4",
+                                    mediaOrientation === "landscape" ? "" : "flex flex-col",
+                                ].join(" ")}
+                            >
                                 {/* Title: single line */}
                                 <div className="truncate text-sm font-semibold text-gray-900">
                                     {item.series?.name_snapshot
@@ -190,7 +234,10 @@ export function ItemDetailDialog({
                                 </div>
 
                                 <textarea
-                                    className="mt-2 min-h-[240px] w-full rounded-2xl border px-3 py-2 text-sm"
+                                    className={[
+                                        "mt-2 w-full rounded-2xl border px-3 py-2 text-sm",
+                                        mediaOrientation === "landscape" ? "min-h-[240px]" : "min-h-[360px] flex-1",
+                                    ].join(" ")}
                                     value={item.current_version.prompt_blob || ""}
                                     readOnly
                                 />

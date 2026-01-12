@@ -290,10 +290,10 @@ export default function Page() {
                     ].join(" ")}
                   >
                     {/* 媒体 - 无padding，强制撑满 */}
-                    <div className="relative w-full aspect-[3/4] bg-white group">
+                    <div className="relative w-full aspect-[9/16] bg-white group">
                       {it.media_type === "video" ? (
                         <video
-                          className="absolute inset-0 h-full w-full object-cover"
+                          className="absolute inset-0 h-full w-full object-contain"
                           src={fileUrl(it.media_url)}
                           poster={fileUrl(it.poster_url || it.thumb_url || "") || undefined}
                           preload="metadata"
@@ -315,7 +315,7 @@ export default function Page() {
                         <img
                           src={fileUrl(it.thumb_url || it.poster_url || it.media_url)}
                           alt={it.title}
-                          className="absolute inset-0 h-full w-full object-cover"
+                          className="absolute inset-0 h-full w-full object-contain"
                           loading="lazy"
                           onError={(e) => {
                             e.currentTarget.style.display = "none";

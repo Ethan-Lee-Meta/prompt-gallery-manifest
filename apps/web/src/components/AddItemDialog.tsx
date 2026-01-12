@@ -1,7 +1,7 @@
 "use client";
 
 import Draggable from "react-draggable";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, type DragEvent } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -55,9 +55,11 @@ export function AddItemDialog({
     onCreated: () => void;
 }) {
     const dragRef = useRef<HTMLDivElement>(null);
+    const dragCounter = useRef(0);
 
     // media
     const [file, setFile] = useState<File | null>(null);
+    const [dragActive, setDragActive] = useState(false);
 
     // basic
     const [title, setTitle] = useState("");
@@ -131,6 +133,48 @@ export function AddItemDialog({
         setNewSeriesDelimiter("｜");
         setNewSeriesTags("");
         setBusy(false);
+    }
+
+    function pickFile(f: File | null) {
+        if (!f) return;
+        const t = mediaTypeFromFile(f);
+        if (!t) {
+            toast.error("仅支持图片或视频文件");
+            return;
+        }
+        setFile(f);
+    }
+
+    function handleDragEnter(e: DragEvent<HTMLDivElement>) {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current += 1;
+        if (!dragActive) setDragActive(true);
+    }
+
+    function handleDragOver(e: DragEvent<HTMLDivElement>) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!dragActive) setDragActive(true);
+    }
+
+    function handleDragLeave(e: DragEvent<HTMLDivElement>) {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current -= 1;
+        if (dragCounter.current <= 0) {
+            dragCounter.current = 0;
+            setDragActive(false);
+        }
+    }
+
+    function handleDrop(e: DragEvent<HTMLDivElement>) {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current = 0;
+        setDragActive(false);
+        const f = e.dataTransfer.files?.[0] || null;
+        pickFile(f);
     }
 
     async function submit() {
@@ -227,19 +271,32 @@ export function AddItemDialog({
                             <div className="px-6 pb-6">
                                 <div className="grid gap-4 md:grid-cols-[360px_1fr] mt-4">
                                     {/* Left: Media */}
-                                    <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4">
+                                    <div
+                                        className="rounded-3xl border border-gray-200 bg-gray-50 p-4"
+                                        onDragEnter={handleDragEnter}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                    >
                                         <div className="border-l-4 border-yellow-300 pl-3 text-xs font-semibold text-gray-800">① 上传媒体 *</div>
                                         <div className="mt-3 rounded-2xl border bg-white p-3">
-                                            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed bg-gray-50 px-3 py-3 text-sm text-gray-700 hover:bg-gray-100 transition">
+                                            <label
+                                                className={[
+                                                    "flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed px-3 py-3 text-sm transition",
+                                                    dragActive
+                                                        ? "border-yellow-300 bg-yellow-50 text-yellow-900"
+                                                        : "bg-gray-50 text-gray-700 hover:bg-gray-100",
+                                                ].join(" ")}
+                                            >
                                                 <Upload className="h-4 w-4" />
-                                                <span>{file ? "更换文件" : "选择图片/视频"}</span>
+                                                <span>{file ? "更换文件" : "选择图片/视频（支持拖拽）"}</span>
                                                 <input
                                                     type="file"
                                                     className="hidden"
                                                     accept="image/*,video/*"
                                                     onChange={(e) => {
                                                         const f = e.target.files?.[0] || null;
-                                                        setFile(f);
+                                                        pickFile(f);
                                                     }}
                                                 />
                                             </label>

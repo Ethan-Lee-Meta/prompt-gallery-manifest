@@ -9,6 +9,7 @@ type NavItem = { label: string; href: string };
 const NAV: NavItem[] = [
     { label: "首页", href: "/" },
     { label: "系列", href: "/series" },
+    { label: "素材", href: "/library" },
     { label: "重复项", href: "/duplicates" },
     { label: "维护", href: "/maintenance" },
 ];

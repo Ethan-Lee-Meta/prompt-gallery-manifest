@@ -30,6 +30,7 @@ def init_db() -> None:
     Controlled by AUTO_CREATE_TABLES=true.
     """
     from app import models  # noqa: F401  ensure metadata loaded
+    from app import models_library # noqa: F401 ensure library models loaded
     SQLModel.metadata.create_all(engine)
 
 

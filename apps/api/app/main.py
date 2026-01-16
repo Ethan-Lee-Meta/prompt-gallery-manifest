@@ -16,6 +16,9 @@ from app.routes.tools import router as tools_router
 from app.routes.categories import router as categories_router
 from app.routes.series import router as series_router
 from app.routes.maintenance import router as maintenance_router
+from app.routes.library import router as library_router
+from app.routes.library_assets import router as library_assets_router
+from app.routes.library_people import router as library_people_router
 
 app = FastAPI(title=settings.app_name)
 
@@ -62,7 +65,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     rid = getattr(request.state, "request_id", uuid.uuid4().hex.upper())
     return JSONResponse(
         status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-        content=error_envelope("INTERNAL_ERROR", "Unexpected server error", rid),
+        content=error_envelope("INTERNAL_ERROR", f"Unexpected server error: {exc}", rid),
     )
 
 
@@ -89,3 +92,6 @@ app.include_router(tools_router, tags=["tools"])
 app.include_router(categories_router, tags=["categories"])
 app.include_router(series_router, tags=["series"])
 app.include_router(maintenance_router, tags=["maintenance"])
+app.include_router(library_router, tags=["library"])
+app.include_router(library_assets_router, tags=["library_assets"])
+app.include_router(library_people_router, tags=["library_people"])

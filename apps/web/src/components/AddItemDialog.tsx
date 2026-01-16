@@ -1,7 +1,7 @@
 "use client";
 
 import Draggable from "react-draggable";
-import { useEffect, useMemo, useState, useRef, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, type DragEvent } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -135,7 +135,7 @@ export function AddItemDialog({
         setBusy(false);
     }
 
-    function pickFile(f: File | null) {
+    const pickFile = useCallback((f: File | null) => {
         if (!f) return;
         const t = mediaTypeFromFile(f);
         if (!t) {
@@ -143,7 +143,25 @@ export function AddItemDialog({
             return;
         }
         setFile(f);
-    }
+    }, []);
+
+    useEffect(() => {
+        if (!open) return;
+        const handlePaste = (e: ClipboardEvent) => {
+            const items = e.clipboardData?.items;
+            if (!items || !items.length) return;
+            const fileItem = Array.from(items).find((it) => it.kind === "file");
+            if (!fileItem) return;
+            const f = fileItem.getAsFile();
+            if (!f) return;
+            e.preventDefault();
+            setDragActive(false);
+            pickFile(f);
+            toast.success("已从剪贴板导入");
+        };
+        window.addEventListener("paste", handlePaste);
+        return () => window.removeEventListener("paste", handlePaste);
+    }, [open, pickFile]);
 
     function handleDragEnter(e: DragEvent<HTMLDivElement>) {
         e.preventDefault();
@@ -257,7 +275,7 @@ export function AddItemDialog({
                         <div ref={dragRef} className="w-[min(96vw,1100px)] rounded-3xl bg-white shadow-2xl outline-none pointer-events-auto">
                             {/* 顶部拖动条 */}
                             <div className="drag-handle flex cursor-move items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-yellow-50 to-white">
-                                <div className="text-base font-semibold">添加条目</div>
+                                <DialogPrimitive.Title className="text-base font-semibold">添加条目</DialogPrimitive.Title>
                                 <button
                                     type="button"
                                     className="rounded-full p-2 hover:bg-gray-100 transition"
@@ -278,7 +296,21 @@ export function AddItemDialog({
                                         onDragLeave={handleDragLeave}
                                         onDrop={handleDrop}
                                     >
-                                        <div className="border-l-4 border-yellow-300 pl-3 text-xs font-semibold text-gray-800">① 上传媒体 *</div>
+                                        <div className="flex items-center gap-2 border-l-4 border-yellow-300 pl-3 text-xs font-semibold text-gray-800">
+                                            <span>① 上传媒体 *</span>
+                                            <span
+                                                className="rounded-full border bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-600"
+                                                title="支持直接粘贴图片/视频（Ctrl/Cmd+V）"
+                                            >
+                                                支持粘贴
+                                            </span>
+                                            <span
+                                                className="inline-flex h-4 w-4 items-center justify-center rounded-full border bg-white text-[10px] font-semibold text-gray-500"
+                                                title="打开弹窗后，直接在页面按 Ctrl/Cmd+V 即可从剪贴板导入媒体文件。"
+                                            >
+                                                ?
+                                            </span>
+                                        </div>
                                         <div className="mt-3 rounded-2xl border bg-white p-3">
                                             <label
                                                 className={[
@@ -289,7 +321,7 @@ export function AddItemDialog({
                                                 ].join(" ")}
                                             >
                                                 <Upload className="h-4 w-4" />
-                                                <span>{file ? "更换文件" : "选择图片/视频（支持拖拽）"}</span>
+                                                <span>{file ? "更换文件" : "选择图片/视频（支持拖拽/粘贴）"}</span>
                                                 <input
                                                     type="file"
                                                     className="hidden"

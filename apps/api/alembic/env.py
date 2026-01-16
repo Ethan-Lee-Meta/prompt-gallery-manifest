@@ -17,6 +17,7 @@ if config.config_file_name is not None:
 from sqlmodel import SQLModel  # noqa
 from app.settings import settings  # reads DATABASE_URL
 from app import models  # noqa: F401  ensure all models imported and registered
+from app import models_library # Register library models (Asset, Person, etc.)
 
 target_metadata = SQLModel.metadata
 
@@ -56,6 +57,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            render_as_batch=True,
         )
 
         with context.begin_transaction():

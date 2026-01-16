@@ -10,6 +10,12 @@ echo Logs will stream in this window. Press Ctrl+C to stop.
 echo Ensuring previous processes are stopped...
 wsl bash -lc "cd \"$(wslpath '%ROOT%')\" && ./scripts/stop.sh" >nul 2>nul
 wsl bash -lc "cd \"$(wslpath '%ROOT%')\" && API_PORT=%API_PORT% WEB_PORT=%WEB_PORT% ./scripts/dev.sh"
+if errorlevel 1 (
+    echo.
+    echo Script failed with error level %errorlevel%.
+    pause
+    exit /b %errorlevel%
+)
 exit /b
 
 :find_free_port

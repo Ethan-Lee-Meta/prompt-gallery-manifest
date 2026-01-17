@@ -190,76 +190,76 @@ export function AssetsView() {
             </div>
 
             {view === "grid" ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,280px))] gap-4 justify-center">
                     {assets.map((asset) => (
                         <div
                             key={asset.id}
-                            className="group"
+                            className="group w-[280px]"
                         >
-                            <Card className="h-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-150">
-                                <div className="p-0">
-                                    {/* Media area - matches homepage */}
-                                    <div
-                                        className="relative w-full aspect-[9/16] bg-white cursor-pointer overflow-hidden"
-                                        onClick={() => setLightboxAsset(asset)}
+                            {/* Card with no border, images go edge-to-edge */}
+                            <div className="h-full overflow-hidden rounded-2xl bg-white shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-150">
+                                {/* Media area - no padding, fills to edges */}
+                                <div
+                                    className="relative w-[280px] h-[380px] bg-gray-50 cursor-pointer overflow-hidden"
+                                    onClick={() => setLightboxAsset(asset)}
+                                >
+                                    <img
+                                        src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${asset.thumb_path || asset.storage_path}`}
+                                        alt={asset.filename}
+                                        className="absolute inset-0 w-full h-full object-cover"
+                                        loading="lazy"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                            const parent = target.parentElement;
+                                            if (parent && !parent.querySelector('.fallback')) {
+                                                const fallback = document.createElement('div');
+                                                fallback.className = 'fallback absolute inset-0 flex items-center justify-center text-gray-400 text-sm font-medium';
+                                                fallback.textContent = asset.kind || 'Image';
+                                                parent.appendChild(fallback);
+                                            }
+                                        }}
+                                    />
+
+                                    {/* Delete button - always visible on mobile, hover on desktop */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(asset.id, asset.filename);
+                                        }}
+                                        className="absolute top-2 right-2 p-2 rounded-full bg-white/90 text-gray-700 shadow-md sm:opacity-0 sm:group-hover:opacity-100 transition hover:bg-red-50 hover:text-red-600"
+                                        title="删除"
                                     >
-                                        <img
-                                            src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${asset.thumb_path || asset.storage_path}`}
-                                            alt={asset.filename}
-                                            className="absolute inset-0 w-full h-full object-contain"
-                                            loading="lazy"
-                                            onError={(e) => {
-                                                const target = e.target as HTMLImageElement;
-                                                target.style.display = 'none';
-                                                const parent = target.parentElement;
-                                                if (parent && !parent.querySelector('.fallback')) {
-                                                    const fallback = document.createElement('div');
-                                                    fallback.className = 'fallback absolute inset-0 flex items-center justify-center text-gray-400 text-sm font-medium';
-                                                    fallback.textContent = asset.kind || 'Image';
-                                                    parent.appendChild(fallback);
-                                                }
-                                            }}
-                                        />
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
 
-                                        {/* Delete button - always visible on mobile, hover on desktop */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDelete(asset.id, asset.filename);
-                                            }}
-                                            className="absolute top-2 right-2 p-2 rounded-full bg-white/90 text-gray-700 shadow-md sm:opacity-0 sm:group-hover:opacity-100 transition hover:bg-red-50 hover:text-red-600"
-                                            title="删除"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    {/* Content area */}
-                                    <div className="p-3">
-                                        <div className="text-sm font-medium truncate">{asset.filename}</div>
-                                        <div className="text-xs text-gray-500 truncate mt-0.5">{asset.source || "Unknown"}</div>
-                                        <div className="mt-2 flex items-center gap-2">
+                                {/* Content area */}
+                                <div className="p-3">
+                                    <div className="text-sm font-medium truncate">{asset.filename}</div>
+                                    <div className="text-xs text-gray-500 truncate mt-0.5">{asset.source || "Unknown"}</div>
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5">
+                                            {asset.kind}
+                                        </Badge>
+                                        {asset.people?.length ? (
                                             <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5">
-                                                {asset.kind}
+                                                {asset.people.length} 人
                                             </Badge>
-                                            {asset.people?.length ? (
-                                                <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5">
-                                                    {asset.people.length} 人
-                                                </Badge>
-                                            ) : null}
-                                        </div>
+                                        ) : null}
                                     </div>
                                 </div>
-                            </Card>
+                            </div>
                         </div>
                     ))}
                 </div>
             ) : (
                 <div className="space-y-2">
                     {assets.map((asset) => (
-                        <button
+                        <div
                             key={asset.id}
-                            className="w-full rounded-2xl ring-1 ring-black/5 bg-white hover:bg-gray-50 transition px-3 py-2 text-left"
+                            className="group w-full rounded-2xl ring-1 ring-black/5 bg-white hover:bg-gray-50 transition px-3 py-2 cursor-pointer relative"
+                            onClick={() => setLightboxAsset(asset)}
                         >
                             <div className="flex items-center gap-3">
                                 <div className="w-16 h-16 rounded-2xl overflow-hidden ring-1 ring-black/5 flex-shrink-0 relative bg-gray-100">
@@ -283,43 +283,104 @@ export function AssetsView() {
                                     <Badge variant="secondary" className="rounded-xl text-xs">
                                         {asset.kind}
                                     </Badge>
+                                    {/* Delete button */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(asset.id, asset.filename);
+                                        }}
+                                        className="p-2 rounded-full bg-white text-gray-700 hover:bg-red-50 hover:text-red-600 transition"
+                                        title="删除"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
-                        </button>
+                        </div>
                     ))}
                 </div>
             )}
 
-            {/* Lightbox */}
+            {/* Modal Dialog */}
             {lightboxAsset && (
                 <div
-                    className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+                    className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
                     onClick={() => setLightboxAsset(null)}
                 >
-                    <button
-                        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
-                        onClick={() => setLightboxAsset(null)}
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto"
+                        onClick={(e) => e.stopPropagation()}
                     >
-                        <X className="w-6 h-6" />
-                    </button>
-                    <div className="max-w-6xl max-h-full" onClick={(e) => e.stopPropagation()}>
-                        {lightboxAsset.kind === 'video' ? (
-                            <video
-                                src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${lightboxAsset.storage_path}`}
-                                controls
-                                autoPlay
-                                className="max-w-full max-h-[90vh] object-contain"
-                            />
-                        ) : (
-                            <img
-                                src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${lightboxAsset.storage_path}`}
-                                alt={lightboxAsset.filename}
-                                className="max-w-full max-h-[90vh] object-contain"
-                            />
-                        )}
-                        <div className="mt-4 text-white text-center">
-                            <div className="font-medium">{lightboxAsset.filename}</div>
-                            <div className="text-sm text-gray-400 mt-1">{lightboxAsset.source || "Unknown"} • {lightboxAsset.kind}</div>
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-lg font-semibold text-gray-900">详情</h2>
+                            <button
+                                className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition"
+                                onClick={() => setLightboxAsset(null)}
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Image */}
+                        <div className="p-6">
+                            <div className="rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
+                                {lightboxAsset.kind === 'video' ? (
+                                    <video
+                                        src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${lightboxAsset.storage_path}`}
+                                        controls
+                                        autoPlay
+                                        className="max-w-full max-h-[60vh] object-contain"
+                                    />
+                                ) : (
+                                    <img
+                                        src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${lightboxAsset.storage_path}`}
+                                        alt={lightboxAsset.filename}
+                                        className="max-w-full max-h-[60vh] object-contain"
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Details */}
+                        <div className="px-6 pb-6 space-y-4">
+                            <div>
+                                <div className="text-sm text-gray-500 mb-1">文件名</div>
+                                <div className="text-base font-medium text-gray-900">{lightboxAsset.filename}</div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <div className="text-sm text-gray-500 mb-1">来源</div>
+                                    <div className="text-base text-gray-900">{lightboxAsset.source || "Unknown"}</div>
+                                </div>
+                                <div>
+                                    <div className="text-sm text-gray-500 mb-1">类型</div>
+                                    <div className="text-base text-gray-900">
+                                        <Badge variant="secondary" className="rounded-full">
+                                            {lightboxAsset.kind}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {lightboxAsset.people && lightboxAsset.people.length > 0 && (
+                                <div>
+                                    <div className="text-sm text-gray-500 mb-1">关联人物</div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {lightboxAsset.people.map((person, idx) => (
+                                            <Badge key={idx} variant="secondary" className="rounded-full">
+                                                {person}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <div className="text-sm text-gray-500 mb-1">资产 ID</div>
+                                <div className="text-sm text-gray-600 font-mono">{lightboxAsset.id}</div>
+                            </div>
                         </div>
                     </div>
                 </div>

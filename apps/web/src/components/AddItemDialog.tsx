@@ -1,7 +1,7 @@
 "use client";
 
 import Draggable from "react-draggable";
-import { useEffect, useMemo, useState, useRef, type DragEvent } from "react";
+import { useEffect, useMemo, useState, useRef, type DragEvent, type ClipboardEvent } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -94,6 +94,18 @@ export function AddItemDialog({
         };
     }, [previewUrl]);
 
+    // 监听粘贴事件
+    useEffect(() => {
+        if (!open) return;
+
+        const pasteHandler = (e: ClipboardEvent) => handlePaste(e);
+        document.addEventListener('paste', pasteHandler as any);
+
+        return () => {
+            document.removeEventListener('paste', pasteHandler as any);
+        };
+    }, [open]);
+
     const pickedSeries = useMemo(() => {
         if (seriesMode !== "existing") return null;
         return seriesList.find((s) => s.id === seriesId) || null;
@@ -175,6 +187,26 @@ export function AddItemDialog({
         setDragActive(false);
         const f = e.dataTransfer.files?.[0] || null;
         pickFile(f);
+    }
+
+    function handlePaste(e: ClipboardEvent) {
+        e.preventDefault();
+        const items = e.clipboardData?.items;
+        if (!items) return;
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            // 检查是否为图片或视频
+            if (item.kind === 'file' &&
+                (item.type.startsWith('image/') || item.type.startsWith('video/'))) {
+                const file = item.getAsFile();
+                if (file) {
+                    pickFile(file);
+                    toast.success(`已粘贴: ${file.name}`);
+                    break; // 只处理第一个文件
+                }
+            }
+        }
     }
 
     async function submit() {
@@ -289,7 +321,7 @@ export function AddItemDialog({
                                                 ].join(" ")}
                                             >
                                                 <Upload className="h-4 w-4" />
-                                                <span>{file ? "更换文件" : "选择图片/视频（支持拖拽）"}</span>
+                                                <span>{file ? "更换文件" : "选择图片/视频（支持拖拽/粘贴）"}</span>
                                                 <input
                                                     type="file"
                                                     className="hidden"
@@ -329,8 +361,9 @@ export function AddItemDialog({
                                                 )}
                                             </div>
 
-                                            <div className="mt-3 rounded-2xl border bg-yellow-50 p-2 text-xs text-gray-600">
-                                                保存后将自动生成缩略图，并执行自动分类（低置信度会归为"未分类"，可在详情页快速改分类）。
+                                            <div className="mt-3 rounded-2xl border bg-yellow-50 p-2 text-xs text-gray-600 space-y-1">
+                                                <div>💡 提示：也可以直接 Ctrl+V 粘贴图片或视频</div>
+                                                <div>保存后将自动生成缩略图，并执行自动分类（低置信度会归为"未分类"，可在详情页快速改分类）。</div>
                                             </div>
                                         </div>
                                     </div>

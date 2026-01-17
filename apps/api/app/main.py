@@ -17,6 +17,12 @@ from app.routes.categories import router as categories_router
 from app.routes.series import router as series_router
 from app.routes.maintenance import router as maintenance_router
 
+# Library routes
+from library.routes.assets import router as library_assets_router
+from library.routes.people import router as library_people_router
+from library.routes.faces import router as library_faces_router
+from library.routes.local_ops import router as local_ops_router
+
 app = FastAPI(title=settings.app_name)
 
 origins = [o.strip() for o in settings.allow_origins.split(",") if o.strip()]
@@ -71,6 +77,11 @@ storage_root = Path(settings.storage_root)
 storage_root.mkdir(parents=True, exist_ok=True)
 app.mount("/files", StaticFiles(directory=str(storage_root), check_dir=False), name="files")
 
+# Library static files
+library_storage = Path(".data/library/storage").resolve()
+library_storage.mkdir(parents=True, exist_ok=True)
+app.mount("/library-files", StaticFiles(directory=str(library_storage), check_dir=False), name="library-files")
+
 
 @app.get("/health")
 def health():
@@ -81,6 +92,10 @@ def health():
 def _startup():
     if settings.auto_create_tables:
         init_db()
+    
+    # Initialize library database
+    from library.db import init_db as init_library_db
+    init_library_db()
 
 
 # Routers
@@ -89,3 +104,9 @@ app.include_router(tools_router, tags=["tools"])
 app.include_router(categories_router, tags=["categories"])
 app.include_router(series_router, tags=["series"])
 app.include_router(maintenance_router, tags=["maintenance"])
+
+# Library routers
+app.include_router(library_assets_router, tags=["library-assets"])
+app.include_router(library_people_router, tags=["library-people"])
+app.include_router(library_faces_router, tags=["library-faces"])
+app.include_router(local_ops_router, tags=["local"])

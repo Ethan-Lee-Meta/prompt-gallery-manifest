@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, Copy, Plus, Filter, Trash2, RotateCcw, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ function categoryBadgeClass(name: string) {
 }
 
 
-export default function Page() {
+function PageContent() {
   const searchParams = useSearchParams();
   const [q, setQ] = useState("");
   const [cats, setCats] = useState<CategoryDTO[]>([]);
@@ -490,5 +490,13 @@ export default function Page() {
         />
       </div >
     </div >
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">加载中...</div>}>
+      <PageContent />
+    </Suspense>
   );
 }

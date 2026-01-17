@@ -1,0 +1,449 @@
+交付包A. 交付包总览（HandoffPack）
+A1. 范围（Scope）
+
+Web UI（Next.js）：Assets/People/Person 视图；Open folder/Copy path；Agent online/offline 降级。
+
+FastAPI 本地 Agent（UMK 同进程）：/local/* 三个端点（ping、refs-folder、refs:open）。
+
+Refs materialize：把 person 的 per-bucket refs 输出到固定目录，并写 manifest.json。
+
+最小数据模型：assets / face_instances / people / memberships / person_refs / audit_events（或先后实现）。
+
+Gate：可脚本化验证 /local/* 与 materialize（不弹出 Explorer/Finder，使用 reveal=false）。
+
+A2. 非范围（Non-goals）
+
+大规模分布式索引 / 云端同步
+
+训练自有识别模型
+
+多用户权限体系（本地单用户）
+
+B. 目录契约（Directory Contract）
+B1. 环境变量
+
+UMK_STORAGE_ROOT：默认 ./library（运行时 resolve 到绝对路径）
+
+B2. 文件结构（必须锁定）
+library/
+  assets/
+    <asset_id>/
+      original.<ext>
+      thumb.jpg
+      meta.json
+      faces/
+        <face_id>.jpg
+  people/
+    <person_id>/
+      refs/
+        frontal.jpg
+        l3q.jpg
+        r3q.jpg
+        lprofile.jpg
+        rprofile.jpg
+        up.jpg
+        down.jpg
+        manifest.json
+      cache/
+        cover.jpg
+
+B3. 关键规则
+
+people/<id>/refs/<bucket>.jpg 固定命名（适配即梦 / nano banana 的“直接拖文件夹”）
+
+manifest.json 必须可追溯：bucket→face_id→asset_id、bbox、pose、quality、selected_by/at、算法参数版本等
+
+C. API 契约（Contract）
+C1. Local Agent（与当前画布 MVP 完全对齐）
+
+GET /local/ping
+
+GET /local/people/{person_id}/refs-folder
+
+POST /local/people/{person_id}/refs:open
+
+Request: { "prepare": true|false, "reveal": true|false }
+
+Response: { "ok": true, "path": "<abs_path>", "prepared": true|false }
+
+C2. 行为要求
+
+不允许前端传任意 path：只传 person_id，服务端计算路径
+
+refs:open：
+
+prepare=true：materialize（写 refs jpg + manifest）
+
+reveal=true：打开系统文件夹（Explorer/Finder/xdg-open）
+
+可测性要求：Gate 里调用必须支持 reveal=false（避免测试机弹窗）
+
+C3. 安全边界
+
+服务端校验 person_id 字符集与长度
+
+计算出的路径必须位于 UMK_STORAGE_ROOT 下（防路径穿越）
+
+FastAPI 仅监听 127.0.0.1
+
+CORS allowlist 仅允许你的前端 origin（如 http://127.0.0.1:2000）
+
+D. 后端模块划分（Backend Modules）
+
+下面给出推荐的最小模块边界与文件清单（你可按现有 UMK 目录落位；关键是职责拆分与可测性）。
+
+D1. 路由层
+
+umk/routers/local_ops.py
+
+/local/ping
+
+/local/people/{id}/refs-folder
+
+/local/people/{id}/refs:open
+
+D2. 服务层
+
+umk/services/path_policy.py
+
+_safe_person_id()
+
+ensure_under_root(root, path)
+
+person_refs_dir(person_id) -> Path
+
+umk/services/os_reveal.py
+
+reveal_folder(path: Path)（Windows/macOS/Linux）
+
+umk/services/refs_materializer.py
+
+materialize_person_refs(person_id, strictness, match_threshold, ...)
+
+读 person_refs（或即时计算）→ copy/link face crops → 写 manifest
+
+D3. 数据层（SQLModel / SQLite）
+
+umk/models/assets.py
+
+umk/models/people.py
+
+umk/models/faces.py
+
+umk/models/refs.py
+
+umk/models/audit.py
+
+（若你暂时不想上全套 schema，可先只实现 /local/* 的“stub manifest”，但 Gate/DoD 要明确这是 stub。）
+
+D4. 迁移层（Alembic）
+
+alembic/versions/xxxx_people_faces_refs.py
+
+创建 5~6 张最小表（见下节字段清单）
+
+E. 数据契约字段（DB Schema v0.1）
+
+这是“可用 MVP”最小集合；你可先落地 1) assets 2) face_instances 3) people 4) person_refs 即可跑通 refs materialize。
+
+E1. assets
+
+id TEXT PK
+
+sha256 TEXT UNIQUE（可选）
+
+kind TEXT
+
+filename TEXT
+
+source TEXT
+
+storage_relpath TEXT
+
+thumb_relpath TEXT
+
+created_at INTEGER
+
+E2. face_instances
+
+id TEXT PK
+
+asset_id TEXT FK
+
+bbox_x,y,w,h INTEGER
+
+face_crop_relpath TEXT
+
+embedding_blob BLOB（MVP 可选：先不启用向量索引）
+
+yaw,pitch,roll REAL
+
+bucket TEXT
+
+quality_score REAL
+
+excluded INTEGER(0/1)
+
+pinned INTEGER(0/1)
+
+created_at INTEGER
+
+E3. people
+
+id TEXT PK
+
+display_name TEXT
+
+status TEXT
+
+confidence REAL
+
+cover_face_id TEXT NULL
+
+faces_count INTEGER
+
+assets_count INTEGER
+
+created_at INTEGER
+
+E4. person_refs
+
+person_id TEXT
+
+bucket TEXT
+
+face_id TEXT
+
+selected_by TEXT
+
+selected_at INTEGER
+
+UNIQUE(person_id, bucket)
+
+E5. audit_events（推荐）
+
+id TEXT PK
+
+type TEXT
+
+payload_json TEXT
+
+created_at INTEGER
+
+F. 前端交付形态（Frontend Integration）
+F1. 约束
+
+你当前画布 Face Grouping Mvp 已实现：
+
+NEXT_PUBLIC_UMK_BASE_URL 配置
+
+/local/* 调用与 agent online/offline 逻辑
+
+prepareBeforeOpen 开关与降级 toast
+
+F2. 工程化落位建议
+
+apps/web/app/(shell)/assets/page.tsx
+
+apps/web/app/(shell)/people/page.tsx
+
+apps/web/app/(shell)/people/[id]/page.tsx
+
+apps/web/lib/localAgent.ts（封装 /local/* fetchWithTimeout）
+
+apps/web/components/FaceGrouping/*（把画布文件拆组件：AssetsGrid、PeopleGrid、PersonDetail、Inspector）
+
+交付标准：先不强拆也行，但必须能在你的 Next.js 工程里以页面形式跑起来，并通过 Gate 访问本地 Agent。
+
+G. Work Orders（工程化工单）
+
+下面是你可以直接照着执行/验收的工单结构（每条都含 Outcome / Files / DoD / Gate）。
+
+WO-010 Local Agent 路由
+
+Outcome
+
+/local/ping、/local/people/{id}/refs-folder、/local/people/{id}/refs:open 可用
+
+refs:open 支持 reveal=false（Gate 使用）
+
+Files
+
+umk/routers/local_ops.py
+
+umk/services/path_policy.py
+
+umk/services/os_reveal.py
+
+DoD
+
+仅 127.0.0.1 可访问
+
+person_id 校验 + root containment 校验
+
+Windows/macOS/Linux reveal 命令正确且不阻塞（subprocess.Popen）
+
+Gate（示例 curl）
+
+curl -sS http://127.0.0.1:7000/local/ping | grep -q '"ok":true'
+curl -sS http://127.0.0.1:7000/local/people/p001/refs-folder | grep -q '"path"'
+curl -sS -X POST http://127.0.0.1:7000/local/people/p001/refs:open \
+  -H "Content-Type: application/json" \
+  -d '{"prepare":true,"reveal":false}' | grep -q '"ok":true'
+
+WO-020 Refs Materialize（写文件 + manifest）
+
+Outcome
+
+prepare=true 时在 people/<id>/refs/ 写入 bucket 文件与 manifest.json
+
+Files
+
+umk/services/refs_materializer.py
+
+umk/routers/local_ops.py（调用 materializer）
+
+DoD
+
+若 person_refs 缺某 bucket：允许缺失，但 manifest 要标注 missing
+
+manifest 必含：bucket→face_id→asset_id、pose、quality、selected_by/at、algo_params
+
+Gate
+
+curl -sS -X POST http://127.0.0.1:7000/local/people/p001/refs:open \
+  -H "Content-Type: application/json" \
+  -d '{"prepare":true,"reveal":false}' | grep -q '"prepared":true'
+# 再调用 refs-folder 返回路径后，检查 manifest 存在（见 WO-070 脚本化）
+
+WO-030 最小 DB Schema + 查询接口（可选但推荐）
+
+Outcome
+
+person_refs 不再 stub，而是从 DB 读“每桶 face_id”
+
+允许 UI 的手动 Set representative 写回 DB
+
+Files
+
+umk/models/*.py
+
+alembic/versions/*_people_faces_refs.py
+
+umk/routers/people.py（可选）
+
+umk/routers/faces.py（可选）
+
+DoD
+
+migration 可重复执行（不破坏已有数据）
+
+提供最小 CRUD：set refs / pin / exclude
+
+WO-040 前端页面化
+
+Outcome
+
+画布 MVP 变成真实 Next 页面
+
+NEXT_PUBLIC_UMK_BASE_URL 指向本机 7000
+
+Open folder / Copy path 完整闭环
+
+Files
+
+apps/web/app/...
+
+apps/web/lib/localAgent.ts
+
+DoD
+
+Agent offline：UI 降级显示 fallback 路径并可 Copy
+
+Agent online：Open folder 成功（开发机手测）
+
+WO-070 Gate 脚本（工程化验收）
+
+Outcome
+
+一条脚本可以在 CI/本机验证 Local Agent 端点与 materialize（不弹窗）
+
+Files
+
+scripts/gate_local_agent.sh
+
+scripts/gate_refs_materialize.sh
+
+示例：scripts/gate_refs_materialize.sh
+
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE="${UMK_BASE_URL:-http://127.0.0.1:7000}"
+PID="${1:-p001}"
+
+echo "[1/3] ping"
+curl -sS "$BASE/local/ping" | grep -q '"ok":true'
+
+echo "[2/3] refs-folder"
+PATH_JSON="$(curl -sS "$BASE/local/people/$PID/refs-folder")"
+REFS_PATH="$(python - <<'PY'
+import json,sys
+obj=json.loads(sys.stdin.read())
+print(obj.get("path",""))
+PY
+<<<"$PATH_JSON")"
+test -n "$REFS_PATH"
+echo "refs_path=$REFS_PATH"
+
+echo "[3/3] prepare (no reveal)"
+curl -sS -X POST "$BASE/local/people/$PID/refs:open" \
+  -H "Content-Type: application/json" \
+  -d '{"prepare":true,"reveal":false}' | grep -q '"ok":true'
+
+# check manifest exists
+MANIFEST="$REFS_PATH/manifest.json"
+test -f "$MANIFEST"
+echo "OK: $MANIFEST"
+
+H. 失败降级策略（必须写进 DoD）
+
+/local/ping 失败：
+
+UI 显示 agent offline
+
+Open folder 按钮点击 → toast 提示 + fallback path（你现有 MVP 已做）
+
+refs:open prepare=true 失败：
+
+返回错误 detail
+
+UI 提示“未 materialize，仍可 Copy path”
+
+bucket 缺失：
+
+不报错；manifest 标 missing: true，UI coverage 显示 Missing
+
+OS reveal 失败（无 explorer/open/xdg-open）：
+
+仍返回 ok+path（prepared 可能为 true），并在 audit/日志中记录 reveal_error
+
+I. 回滚策略（Rollback）
+
+代码回滚：git revert <commit>
+
+迁移回滚：提供 Alembic downgrade（若你的策略不允许 downgrade，则在 DoD 中明确“仅 forward migration + backup db 文件”）
+
+文件系统回滚：refs 可重建，允许删除 people/<id>/refs/* 后再次 prepare=true 生成
+
+J. 你现在可以直接执行的“最小交付顺序”
+
+WO-010（/local 三端点 + 安全 + reveal=false）
+
+WO-020（materialize + manifest）
+
+WO-070（gate_local_agent / gate_refs_materialize）
+
+WO-040（把画布 MVP 放进 Next 页面，并连接 /local）
+
+WO-030（再补 DB schema 与真实 refs/face 操作）

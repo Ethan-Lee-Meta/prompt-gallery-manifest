@@ -21,11 +21,48 @@ source ~/.bashrc
 nvm install --lts
 ```
 
-Optional environment variables:
-- `DATABASE_URL` (default: `sqlite:////tmp/prompt-gallery-app.db`)
-- `STORAGE_ROOT` (default: `/tmp/prompt-gallery-storage`)
-- `API_PORT` (default: auto-pick 8000-8100)
-- `WEB_PORT` (default: auto-pick 3000-3100)
+## Data Storage
+
+### Default Data Location
+
+All data (database + media files) is stored persistently in:
+
+- **Windows**: `C:\Users\<Your-Username>\AppData\Local\prompt-gallery-data\`
+- **Linux/Mac**: `~/.local/share/prompt-gallery/`
+
+This ensures your data persists even if you delete or re-clone the project from Git.
+
+### Data Structure
+
+```
+prompt-gallery-data/
+├── prompt-gallery-app.db          # SQLite database (items, categories, series, etc.)
+└── prompt-gallery-storage/
+    ├── media/                      # Original media files
+    ├── thumb/                      # Thumbnails
+    └── library/                    # Library files
+```
+
+### Customize Data Location
+
+To use a custom location, create a `.env` file in the project root:
+
+```bash
+DATABASE_URL=sqlite:///D:/my-data/prompt-gallery-app.db
+STORAGE_ROOT=D:/my-data/prompt-gallery-storage
+```
+
+See `.env.example` for all available options.
+
+### Migrating Existing Data
+
+If you have existing data in the project's `.data/` folder:
+
+```bash
+python scripts/migrate-data.py
+```
+
+This will safely copy your data to the new persistent location.
 
 ## Quick start (Windows)
 - `run.bat` to start
@@ -42,5 +79,6 @@ The launcher:
 - `/tmp/prompt-gallery-web.log`
 
 ## Notes
-- The API uses `/tmp/prompt-gallery-app.db` and `/tmp/prompt-gallery-storage` by default.
+- Data is stored persistently in your user directory (see Data Storage section above).
 - If ports are occupied, it will choose the next available port in the range.
+

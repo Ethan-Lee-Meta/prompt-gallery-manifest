@@ -19,6 +19,7 @@ __pycache__/
 
 # env
 apps/web/.env.local
+.env
 
 # exports
 apps/api/export.zip

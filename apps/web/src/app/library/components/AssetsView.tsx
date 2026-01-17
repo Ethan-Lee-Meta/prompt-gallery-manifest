@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Upload, Grid3X3, List } from "lucide-react";
+import { Search, Upload, Grid3X3, List, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { listAssets, uploadAsset, type Asset } from "@/lib/libraryApi";
+import { listAssets, uploadAsset, deleteAsset, type Asset } from "@/lib/libraryApi";
 
 function hashColor(str: string) {
     let h = 0;
@@ -43,6 +43,7 @@ export function AssetsView() {
     const [loading, setLoading] = useState(false);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
+    const [lightboxAsset, setLightboxAsset] = useState<Asset | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Load assets from API
@@ -97,6 +98,21 @@ export function AssetsView() {
             setLoading(false);
             // Reset file input
             if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const handleDelete = async (assetId: string, filename: string) => {
+        if (!confirm(`确定要删除 "${filename}" 吗？`)) return;
+
+        setLoading(true);
+        try {
+            await deleteAsset(assetId);
+            toast.success('已删除');
+            loadAssets(); // Reload list
+        } catch (error: any) {
+            toast.error(error.message || '删除失败');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -174,49 +190,68 @@ export function AssetsView() {
             </div>
 
             {view === "grid" ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {assets.map((asset) => (
-                        <Card
+                        <div
                             key={asset.id}
-                            className="rounded-3xl ring-1 ring-black/5 hover:ring-yellow-400/30 transition cursor-pointer"
+                            className="group"
                         >
-                            <CardContent className="p-3">
-                                <div className="rounded-2xl overflow-hidden ring-1 ring-black/5">
-                                    <div className="aspect-[4/3] relative bg-gray-100">
+                            <Card className="h-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-150">
+                                <div className="p-0">
+                                    {/* Media area - matches homepage */}
+                                    <div
+                                        className="relative w-full aspect-[9/16] bg-white cursor-pointer overflow-hidden"
+                                        onClick={() => setLightboxAsset(asset)}
+                                    >
                                         <img
                                             src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${asset.thumb_path || asset.storage_path}`}
                                             alt={asset.filename}
-                                            className="w-full h-full object-cover"
+                                            className="absolute inset-0 w-full h-full object-contain"
+                                            loading="lazy"
                                             onError={(e) => {
                                                 const target = e.target as HTMLImageElement;
                                                 target.style.display = 'none';
                                                 const parent = target.parentElement;
                                                 if (parent && !parent.querySelector('.fallback')) {
                                                     const fallback = document.createElement('div');
-                                                    fallback.className = 'fallback w-full h-full flex items-center justify-center text-gray-400 text-sm';
-                                                    fallback.textContent = asset.kind;
+                                                    fallback.className = 'fallback absolute inset-0 flex items-center justify-center text-gray-400 text-sm font-medium';
+                                                    fallback.textContent = asset.kind || 'Image';
                                                     parent.appendChild(fallback);
                                                 }
                                             }}
                                         />
+
+                                        {/* Delete button - always visible on mobile, hover on desktop */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDelete(asset.id, asset.filename);
+                                            }}
+                                            className="absolute top-2 right-2 p-2 rounded-full bg-white/90 text-gray-700 shadow-md sm:opacity-0 sm:group-hover:opacity-100 transition hover:bg-red-50 hover:text-red-600"
+                                            title="删除"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    {/* Content area */}
+                                    <div className="p-3">
+                                        <div className="text-sm font-medium truncate">{asset.filename}</div>
+                                        <div className="text-xs text-gray-500 truncate mt-0.5">{asset.source || "Unknown"}</div>
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5">
+                                                {asset.kind}
+                                            </Badge>
+                                            {asset.people?.length ? (
+                                                <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5">
+                                                    {asset.people.length} 人
+                                                </Badge>
+                                            ) : null}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="mt-3">
-                                    <div className="text-sm font-medium truncate">{asset.filename}</div>
-                                    <div className="text-xs text-gray-500 truncate">{asset.source || "Unknown"}</div>
-                                </div>
-                                <div className="mt-2 flex items-center gap-2">
-                                    <Badge variant="secondary" className="rounded-xl text-xs">
-                                        {asset.kind}
-                                    </Badge>
-                                    {asset.people?.length ? (
-                                        <Badge variant="secondary" className="rounded-xl text-xs">
-                                            {asset.people.length} 人
-                                        </Badge>
-                                    ) : null}
-                                </div>
-                            </CardContent>
-                        </Card>
+                            </Card>
+                        </div>
                     ))}
                 </div>
             ) : (
@@ -252,6 +287,41 @@ export function AssetsView() {
                             </div>
                         </button>
                     ))}
+                </div>
+            )}
+
+            {/* Lightbox */}
+            {lightboxAsset && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+                    onClick={() => setLightboxAsset(null)}
+                >
+                    <button
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+                        onClick={() => setLightboxAsset(null)}
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+                    <div className="max-w-6xl max-h-full" onClick={(e) => e.stopPropagation()}>
+                        {lightboxAsset.kind === 'video' ? (
+                            <video
+                                src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${lightboxAsset.storage_path}`}
+                                controls
+                                autoPlay
+                                className="max-w-full max-h-[90vh] object-contain"
+                            />
+                        ) : (
+                            <img
+                                src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${lightboxAsset.storage_path}`}
+                                alt={lightboxAsset.filename}
+                                className="max-w-full max-h-[90vh] object-contain"
+                            />
+                        )}
+                        <div className="mt-4 text-white text-center">
+                            <div className="font-medium">{lightboxAsset.filename}</div>
+                            <div className="text-sm text-gray-400 mt-1">{lightboxAsset.source || "Unknown"} • {lightboxAsset.kind}</div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

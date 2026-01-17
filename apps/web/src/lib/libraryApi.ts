@@ -21,11 +21,15 @@ export type Person = {
     name: string;
     status: string;
     confidence: number;
+    cover_face_id?: string;
     faces_count: number;
     assets_count: number;
+    created_at: number;
+    updated_at?: number;
     coverage: Record<string, boolean>;
     refs: Record<string, string>;
     tags?: string[];
+    thumbnail_path?: string;  // First face crop path for display
 };
 
 export type Face = {
@@ -71,6 +75,14 @@ export async function uploadAsset(file: File, kind?: string, source?: string) {
         body: formData,
     });
     if (!res.ok) throw new Error(`Failed to upload asset: ${res.statusText}`);
+    return res.json();
+}
+
+export async function deleteAsset(assetId: string) {
+    const res = await fetch(`${LIBRARY_API_BASE}/library/assets/${assetId}`, {
+        method: 'DELETE',
+    });
+    if (!res.ok) throw new Error(`Failed to delete asset: ${res.statusText}`);
     return res.json();
 }
 

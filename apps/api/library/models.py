@@ -48,9 +48,10 @@ class PersonDTO(BaseModel):
     assets_count: int = 0
     created_at: int
     updated_at: Optional[int] = None
-    coverage: Optional[dict] = {}  # {bucket: bool}
-    refs: Optional[dict] = {}  # {bucket: face_id}
-    tags: Optional[List[str]] = []
+    coverage: dict = {}  # angle coverage
+    refs: dict = {}  # bucket -> face_id
+    tags: List[str] = []
+    thumbnail_path: Optional[str] = None  # First face crop path for display
 
 
 class PersonRefDTO(BaseModel):

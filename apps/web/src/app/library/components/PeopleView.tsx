@@ -146,8 +146,20 @@ export function PeopleView({ onOpenPerson }: { onOpenPerson: (id: string) => voi
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="rounded-2xl shadow-sm ring-1 ring-black/10 overflow-hidden w-14 h-14">
-                                            <PhotoStub seed={person.id} />
+                                        <div className="rounded-2xl shadow-sm ring-1 ring-black/10 overflow-hidden w-14 h-14 relative bg-gray-100">
+                                            {person.thumbnail_path ? (
+                                                <img
+                                                    src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${person.thumbnail_path}`}
+                                                    alt={person.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.style.display = 'none';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <PhotoStub seed={person.id} />
+                                            )}
                                         </div>
                                         <div className="min-w-0">
                                             <div className="font-medium truncate">{person.name}</div>
@@ -191,8 +203,8 @@ export function PeopleView({ onOpenPerson }: { onOpenPerson: (id: string) => voi
                                                 toggleSelected(person.id);
                                             }}
                                             className={`w-9 h-9 rounded-2xl ring-1 grid place-items-center transition ${selected
-                                                    ? "bg-foreground text-background ring-black/10"
-                                                    : "bg-muted/40 hover:bg-muted ring-black/5"
+                                                ? "bg-foreground text-background ring-black/10"
+                                                : "bg-muted/40 hover:bg-muted ring-black/5"
                                                 }`}
                                             title={selected ? "已选" : "选择"}
                                         >

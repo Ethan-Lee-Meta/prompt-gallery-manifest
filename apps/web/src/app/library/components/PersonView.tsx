@@ -230,8 +230,20 @@ export function PersonView({ personId, onBack }: { personId: string; onBack: () 
                             className={`group rounded-2xl ring-1 overflow-hidden text-left transition ${selected ? "ring-yellow-400/30" : "ring-black/5 hover:ring-yellow-400/20"
                                 }`}
                         >
-                            <div className="aspect-square cursor-pointer" onClick={() => handleSetRef(activeBucket, face.id)}>
-                                <PhotoStub seed={face.id} />
+                            <div className="aspect-square cursor-pointer relative bg-gray-100" onClick={() => handleSetRef(activeBucket, face.id)}>
+                                {face.crop_path ? (
+                                    <img
+                                        src={`${process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000'}${face.crop_path}`}
+                                        alt={`Face ${face.id}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                        }}
+                                    />
+                                ) : (
+                                    <PhotoStub seed={face.id} />
+                                )}
                             </div>
                             <div className="p-2">
                                 <div className="flex items-center justify-between gap-2">

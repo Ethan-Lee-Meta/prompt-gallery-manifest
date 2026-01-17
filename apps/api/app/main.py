@@ -22,6 +22,7 @@ from library.routes.assets import router as library_assets_router
 from library.routes.people import router as library_people_router
 from library.routes.faces import router as library_faces_router
 from library.routes.local_ops import router as local_ops_router
+from library.routes.maintenance import router as library_maintenance_router
 
 app = FastAPI(title=settings.app_name)
 
@@ -110,3 +111,4 @@ app.include_router(library_assets_router, tags=["library-assets"])
 app.include_router(library_people_router, tags=["library-people"])
 app.include_router(library_faces_router, tags=["library-faces"])
 app.include_router(local_ops_router, tags=["local"])
+app.include_router(library_maintenance_router, tags=["library-maintenance"])

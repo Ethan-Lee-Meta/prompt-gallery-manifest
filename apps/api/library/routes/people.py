@@ -58,6 +58,16 @@ def list_people(
             person_dict["coverage"] = coverage
             person_dict["refs"] = refs
             
+            # Get first face crop path for thumbnail
+            cursor.execute("""
+                SELECT crop_path FROM face_instances 
+                WHERE person_id = ? AND excluded = 0
+                ORDER BY quality DESC
+                LIMIT 1
+            """, (person_id,))
+            face_row = cursor.fetchone()
+            person_dict["thumbnail_path"] = face_row[0] if face_row else None
+            
             items.append(PersonDTO(**person_dict))
         
         return {
@@ -88,7 +98,11 @@ def get_person(person_id: str):
         
         # Get faces
         cursor.execute("""
-            SELECT * FROM face_instances 
+            SELECT id, asset_id, person_id, 
+                   bbox_x, bbox_y, bbox_width, bbox_height,
+                   crop_path, yaw, pitch, roll, quality, bucket,
+                   excluded, pinned, created_at
+            FROM face_instances 
             WHERE person_id = ? AND excluded = 0
             ORDER BY quality DESC
         """, (person_id,))

@@ -10,25 +10,13 @@ def _env(name: str, default: str) -> str:
     return v if v is not None and v != "" else default
 
 
-def _get_default_data_dir() -> Path:
-    """获取默认数据目录（用户主目录下的固定位置）"""
-    if os.name == 'nt':  # Windows
-        base = Path(os.environ.get('LOCALAPPDATA', str(Path.home())))
-        return base / 'prompt-gallery-data'
-    else:  # Linux/Mac
-        return Path.home() / '.local' / 'share' / 'prompt-gallery'
-
-
-DEFAULT_DATA_DIR = _get_default_data_dir()
-
-
 @dataclass(frozen=True)
 class Settings:
-    # DB - 默认使用用户目录下的持久化路径
-    database_url: str = _env("DATABASE_URL", f"sqlite:///{DEFAULT_DATA_DIR}/prompt-gallery-app.db")
+    # DB
+    database_url: str = _env("DATABASE_URL", "sqlite:///./data/app.db")
 
-    # Storage - 默认使用用户目录下的持久化路径
-    storage_root: Path = Path(_env("STORAGE_ROOT", str(DEFAULT_DATA_DIR / 'prompt-gallery-storage'))).resolve()
+    # Storage
+    storage_root: Path = Path(_env("STORAGE_ROOT", "./data/storage")).resolve()
 
     # Web
     app_name: str = _env("APP_NAME", "prompt-gallery-api")

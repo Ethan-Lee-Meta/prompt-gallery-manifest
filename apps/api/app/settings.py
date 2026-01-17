@@ -12,11 +12,11 @@ def _env(name: str, default: str) -> str:
 
 @dataclass(frozen=True)
 class Settings:
-    # DB
-    database_url: str = _env("DATABASE_URL", "sqlite:///./data/app.db")
+    # DB - 使用项目内 .data 目录（被 gitignore 忽略，但本地保留）
+    database_url: str = _env("DATABASE_URL", "sqlite:///./.data/prompt-gallery-app.db")
 
-    # Storage
-    storage_root: Path = Path(_env("STORAGE_ROOT", "./data/storage")).resolve()
+    # Storage - 使用项目内 .data 目录
+    storage_root: Path = Path(_env("STORAGE_ROOT", "./.data/prompt-gallery-storage")).resolve()
 
     # Web
     app_name: str = _env("APP_NAME", "prompt-gallery-api")

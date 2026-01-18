@@ -289,7 +289,7 @@ export function AddItemDialog({
                         <div ref={dragRef} className="w-[min(96vw,1100px)] rounded-3xl bg-white shadow-2xl outline-none pointer-events-auto">
                             {/* 顶部拖动条 */}
                             <div className="drag-handle flex cursor-move items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-yellow-50 to-white">
-                                <div className="text-base font-semibold">添加条目</div>
+                                <DialogPrimitive.Title className="text-base font-semibold">添加条目</DialogPrimitive.Title>
                                 <button
                                     type="button"
                                     className="rounded-full p-2 hover:bg-gray-100 transition"
